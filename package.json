@@ -1,0 +1,33 @@
+{
+    "name": "recipes-api",
+    "version": "1.0.0",
+    "main": "src/index.ts",
+    "type": "module",
+    "license": "MIT",
+    "dependencies": {
+        "pg": "^8.10.0",
+        "reflect-metadata": "^0.1.13",
+        "typeorm": "0.3.12",
+        "typescript": "5.0.3"
+   },
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "typeorm": "typeorm-ts-node-commonjs"
+   },
+    "devDependencies": {
+        "@swc/core": "1.3.44",
+        "@types/node": "^18.15.11",
+        "@typescript-eslint/eslint-plugin": "5.57.0",
+        "@typescript-eslint/parser": "5.57.0",
+        "eslint": "8.37.0",
+        "eslint-plugin-import": "2.27.5",
+        "eslint-plugin-simple-import-sort": "10.0.0",
+        "eslint-plugin-unicorn": "46.0.0",
+        "eslint-plugin-unused-imports": "2.0.0",
+        "ts-node": "10.7.0",
+        "typescript": "5.0.3",
+        "vite": "4.2.1",
+        "vite-plugin-node": "3.0.2"
+   }
+}
