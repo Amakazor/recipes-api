@@ -1,5 +1,5 @@
 import { RouteController, Routes } from "./decorators/routes";
-import { RouteData } from "./route-data";
+import { RouteData } from "./router";
 
 @Routes
 export class Controller {

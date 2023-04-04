@@ -20,4 +20,8 @@ export class User extends BaseEntity {
 
     @OneToMany(() => Recipe, recipe => recipe.owner)
         recipes: Recipe[];
+
+    public static ById(id: number): Promise<User> {
+        return this.findOne({ where: { id } });
+    }
 }

@@ -1,8 +1,30 @@
 import { IncomingMessage, ServerResponse } from "http";
 
 import { Controller } from "./controller";
-import { isSecureRoute } from "./route-data";
-import { handleSecureRoute } from "./security/handle-secure-route";
+import { JWT, TokenPayload } from "./security/jwt";
+
+export type SecureHandler = (request: IncomingMessage, response: ServerResponse, token: TokenPayload) => void;
+export type UnsecureHandler = (request: IncomingMessage, response: ServerResponse) => void;
+
+export type SecurityDefinition = {
+    roles: string[];
+}
+
+export type SecureRoute = {
+    method: string;
+    path: string[];
+    handler: SecureHandler;
+    security: SecurityDefinition;
+}
+
+export type UnsecureRoute = {
+    method: string;
+    path: string[];
+    handler: UnsecureHandler;
+}
+
+export type RouteData = SecureRoute | UnsecureRoute;
+export const isSecureRoute = (route: RouteData): route is SecureRoute => (route as SecureRoute).security !== undefined;
 
 export class Router {
     private controllers: Controller[] = [];
@@ -26,7 +48,22 @@ export class Router {
             return;
         }
 
-        if (isSecureRoute(routeData)) handleSecureRoute(req, res, routeData);
+        if (isSecureRoute(routeData)) this.handleSecureRoute(req, res, routeData);
         else routeData.handler(req, res);
     }
+
+    private sendUnauthorized = (response: ServerResponse) => {
+        response.statusCode = 401;
+        response.end();
+    };
+
+    private handleSecureRoute = (request: IncomingMessage, response: ServerResponse, { handler, security }: SecureRoute) => {
+        const tokenPayload = JWT.getTokenPayload(request);
+        if (!tokenPayload) return this.sendUnauthorized(response);
+
+        if (security.roles.some(role => !tokenPayload.roles.includes(role))) return this.sendUnauthorized(response);
+
+        handler(request, response, tokenPayload);
+    };
+
 }

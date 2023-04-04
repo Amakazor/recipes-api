@@ -1,4 +1,4 @@
-import { RouteData, SecurityDefinition } from "../route-data";
+import { RouteData, SecurityDefinition } from "../router";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Constructor<T> = new(...args: any[]) => T;

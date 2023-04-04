@@ -2,7 +2,7 @@ import { IncomingMessage, ServerResponse } from "http";
 
 import { Controller } from "../controller";
 import { Route, Routes } from "../decorators/routes";
-import { generateToken } from "../security/jwt";
+import { JWT } from "../security/jwt";
 
 @Routes
 export class DebugController extends Controller {
@@ -12,7 +12,7 @@ export class DebugController extends Controller {
 
     @Route("GET", "/get-token/")
     public getDebugToken(req: IncomingMessage, res: ServerResponse) {
-        const token = generateToken({
+        const token = JWT.generateToken({
             email: "email@email.com",
             id: "1",
             roles: ["user"],
@@ -25,7 +25,7 @@ export class DebugController extends Controller {
 
     @Route("GET", "/get-admin-token/")
     public getAdminToken(req: IncomingMessage, res: ServerResponse) {
-        const token = generateToken({
+        const token = JWT.generateToken({
             email: "admin@email.com",
             id: "2",
             roles: ["admin, user"],
