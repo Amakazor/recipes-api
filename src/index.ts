@@ -4,7 +4,7 @@ import "reflect-metadata";
 import { IncomingMessage, ServerResponse } from "http";
 
 import { RecipesSource } from "./data-source";
-import { DebugController } from "./routing/controllers/debug-controller";
+import { DebugController } from "./routing/controllers/debug/debug-controller";
 import { IngredientController } from "./routing/controllers/ingredients/ingredient-controller";
 import { Router } from "./routing/router";
 
