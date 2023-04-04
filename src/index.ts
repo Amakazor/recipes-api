@@ -22,7 +22,9 @@ const router = new Router([
 ]);
 
 // noinspection JSUnusedGlobalSymbols
-export const viteNodeApp = (req: IncomingMessage, res: ServerResponse) => {
-    router.handleRoute(req, res);
+export const viteNodeApp = async (req: IncomingMessage, res: ServerResponse) => {
+    console.log(`Request: ${req.url}`);
+    await router.handleRoute(req, res);
     res.end();
+    console.log("Response sent");
 };

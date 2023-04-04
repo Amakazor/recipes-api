@@ -3,8 +3,8 @@ import { IncomingMessage, ServerResponse } from "http";
 import { Controller } from "./controller";
 import { JWT, TokenPayload } from "./security/jwt";
 
-export type SecureHandler = (request: IncomingMessage, response: ServerResponse, token: TokenPayload) => void;
-export type UnsecureHandler = (request: IncomingMessage, response: ServerResponse) => void;
+export type SecureHandler = (request: IncomingMessage, response: ServerResponse, token: TokenPayload) => Promise<void>;
+export type UnsecureHandler = (request: IncomingMessage, response: ServerResponse) => Promise<void>;
 
 export type SecurityDefinition = {
     roles: string[];
@@ -37,7 +37,7 @@ export class Router {
         this.controllers.push(controller);
     }
 
-    public handleRoute(req: IncomingMessage, res: ServerResponse) {
+    public async handleRoute(req: IncomingMessage, res: ServerResponse) {
         const path = req.url?.split("/").filter(Boolean) || [];
         const method = req.method || "GET";
         const routeData = this.controllers.find(controller => controller.matchRoute(path, method))?.matchRoute(path, method);
@@ -48,8 +48,8 @@ export class Router {
             return;
         }
 
-        if (isSecureRoute(routeData)) this.handleSecureRoute(req, res, routeData);
-        else routeData.handler(req, res);
+        if (isSecureRoute(routeData)) await this.handleSecureRoute(req, res, routeData);
+        else await routeData.handler(req, res);
     }
 
     private sendUnauthorized = (response: ServerResponse) => {
@@ -57,13 +57,13 @@ export class Router {
         response.end();
     };
 
-    private handleSecureRoute = (request: IncomingMessage, response: ServerResponse, { handler, security }: SecureRoute) => {
+    private handleSecureRoute = async (request: IncomingMessage, response: ServerResponse, { handler, security }: SecureRoute) => {
         const tokenPayload = JWT.getTokenPayload(request);
         if (!tokenPayload) return this.sendUnauthorized(response);
 
         if (security.roles.some(role => !tokenPayload.roles.includes(role))) return this.sendUnauthorized(response);
 
-        handler(request, response, tokenPayload);
+        await handler(request, response, tokenPayload);
     };
 
 }

@@ -1,7 +1,9 @@
-import { BaseEntity, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { BaseEntity, Column, CreateDateColumn, Entity, Not, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 import { Ingredient } from "./ingredient";
 import { Recipe } from "./recipe";
+
+export type Role = "admin" | "user";
 
 export interface UserDTO {
     id?: number;
@@ -9,6 +11,7 @@ export interface UserDTO {
     createdAt: Date;
     ingredients: Ingredient[];
     recipes: Recipe[];
+    roles: Role[];
 }
 
 @Entity()
@@ -23,6 +26,9 @@ export class User extends BaseEntity implements UserDTO {
     @CreateDateColumn()
         createdAt: Date;
 
+    @Column("simple-array")
+        roles: Role[];
+
     @OneToMany(() => Ingredient, ingredient => ingredient.owner)
         ingredients: Ingredient[];
 
@@ -31,6 +37,14 @@ export class User extends BaseEntity implements UserDTO {
 
     public static byId(id: number): Promise<User> {
         return this.findOne({ where: { id } });
+    }
+
+    public static firstAdmin(): Promise<User> {
+        return this.findOne({ where: { roles: "admin" } });
+    }
+
+    public static firstUser(): Promise<User> {
+        return this.findOne({ where: { roles: Not("admin") } });
     }
 
     private static async resetAutoIncrement() {
@@ -50,6 +64,7 @@ export class User extends BaseEntity implements UserDTO {
             createdAt: this.createdAt,
             ingredients: this.ingredients,
             recipes: this.recipes,
+            roles: this.roles,
         };
     }
 
@@ -61,6 +76,7 @@ export class User extends BaseEntity implements UserDTO {
         user.createdAt = dto.createdAt;
         user.ingredients = dto.ingredients;
         user.recipes = dto.recipes;
+        user.roles = dto.roles;
 
         return user;
     }

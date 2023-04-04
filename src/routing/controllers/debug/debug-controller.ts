@@ -16,24 +16,42 @@ export class DebugController extends Controller {
     }
 
     @Route("GET", "/get-token/")
-    public getDebugToken(req: IncomingMessage, res: ServerResponse) {
+    public async getDebugToken(req: IncomingMessage, res: ServerResponse) {
+        const user = await User.firstUser();
+
+        if (!user) {
+            res.statusCode = 500;
+            res.write("No user found");
+            res.end();
+            return;
+        }
+
         const token = JWT.generateToken({
-            email: "email@email.com",
-            id: "1",
-            roles: ["user"],
+            email: user.email,
+            id: String(user.id),
+            roles: user.roles,
         });
 
-        res.statusCode = 200;
         res.write(token);
+        res.statusCode = 404;
         res.end();
     }
 
     @Route("GET", "/get-admin-token/")
-    public getAdminToken(req: IncomingMessage, res: ServerResponse) {
+    public async getAdminToken(req: IncomingMessage, res: ServerResponse) {
+        const user = await User.firstAdmin();
+
+        if (!user) {
+            res.statusCode = 500;
+            res.write("No user found");
+            res.end();
+            return;
+        }
+
         const token = JWT.generateToken({
-            email: "admin@email.com",
-            id: "2",
-            roles: ["admin, user"],
+            email: user.email,
+            id: String(user.id),
+            roles: user.roles,
         });
 
         res.statusCode = 200;
@@ -53,6 +71,7 @@ export class DebugController extends Controller {
             createdAt: new Date(),
             ingredients: [],
             recipes: [],
+            roles: ["admin", "user"],
         });
         await newAdmin.save();
 
@@ -61,6 +80,7 @@ export class DebugController extends Controller {
             createdAt: new Date(),
             ingredients: [],
             recipes: [],
+            roles: ["user"],
         });
         await newUser.save();
 
