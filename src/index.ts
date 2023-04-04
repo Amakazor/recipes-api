@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+// noinspection TypeScriptValidateJSTypes
+
 import "reflect-metadata";
 
 import { IncomingMessage, ServerResponse } from "http";
