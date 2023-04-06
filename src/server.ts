@@ -7,8 +7,7 @@ import { IncomingMessage, ServerResponse } from "http";
 
 import { Request } from "./communication/request";
 import { RecipesSource } from "./data-source";
-import { DebugController } from "./routing/controllers/debug/debug-controller";
-import { IngredientController } from "./routing/controllers/ingredients/ingredient-controller";
+import { DebugController, IngredientController } from "./routing/controllers";
 import { Router } from "./routing/router";
 
 try {

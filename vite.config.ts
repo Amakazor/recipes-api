@@ -5,7 +5,7 @@ export default defineConfig({
     plugins: [
         ...VitePluginNode({
             adapter: ({ app, req, res }) => app(req, res),
-            appPath: "./src/index.ts",
+            appPath: "./src/server.ts",
             tsCompiler: "swc",
         }),
     ],

@@ -1,6 +1,7 @@
 // eslint-disable-next-line max-classes-per-file
 import { IncomingHttpHeaders, IncomingMessage, ServerResponse } from "http";
 import parseUrl from "parseurl";
+import { SafeParseReturnType } from "zod";
 
 import { RouteData } from "../routing/router";
 
@@ -20,7 +21,7 @@ export class Request {
         this.query = query;
     }
 
-    public static handleIncomingMessage(req: IncomingMessage, res: ServerResponse, handler: (request: Request, response: ServerResponse) => Promise<ServerResponse>) {
+    public static handleIncomingMessage(req: IncomingMessage, res: ServerResponse, handler: (request: Request, response: ServerResponse) => Promise<void>) {
         const body = [];
 
         req.on("data", (chunk) => {
@@ -35,7 +36,8 @@ export class Request {
 
             const request = new Request(pathname, req.method, req.headers, parsedBody, parsedQuery);
 
-            (await handler(request, res)).end();
+            await handler(request, res);
+            res.end();
         });
     }
 
@@ -55,17 +57,33 @@ export class TypedRequest<B, Q> extends Request {
     constructor(request: Request, bodyParser: RouteData<B, Q>["bodyParser"], queryParser: RouteData<B, Q>["queryParser"]) {
         super(request.url, request.method, request.headers, request.body, request.query);
 
-        this.parsedBody = this.parseBody(bodyParser?.parse ?? TypedRequest.nullparser);
-        this.parsedQuery = this.parseQuery(queryParser?.parse ?? TypedRequest.nullparser);
+        try {
+            this.parsedBody = this.parseBody(bodyParser?.safeParse ?? TypedRequest.nullparser);
+        } catch (error) {
+            throw new Error(`Invalid request body: ${error}`);
+        }
+
+        try {
+            this.parsedQuery = this.parseQuery(queryParser?.safeParse ?? TypedRequest.nullparser);
+        } catch (error) {
+            throw new Error(`Invalid request query: ${error}`);
+        }
     }
 
-    private parseBody<T>(parser: (body: unknown) => T): T {
-        return parser(this.body);
+    private parseBody<T>(parser: (body: unknown) => SafeParseReturnType<unknown, T>): T {
+        const parsed = parser(this.body);
+        if (parsed.success === false) throw parsed.error;
+        return parsed.data;
     }
 
-    private parseQuery<T>(parser: (query: unknown) => T): T {
-        return parser(this.query);
+    private parseQuery<T>(parser: (query: unknown) => SafeParseReturnType<unknown, T>): T {
+        const parsed = parser(this.query);
+        if (parsed.success === false) throw parsed.error;
+        return parsed.data;
     }
 
-    private static nullparser = () => null;
+    private static nullparser = () => ({
+        success: true as const,
+        data: null,
+    });
 }

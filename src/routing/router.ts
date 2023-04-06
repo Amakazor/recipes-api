@@ -1,4 +1,5 @@
 import { ServerResponse } from "http";
+import { SafeParseReturnType } from "zod";
 
 import { Request, TypedRequest } from "../communication/request";
 import { Controller } from "./controller";
@@ -15,8 +16,8 @@ export type UnsecureRoute<B, Q> = {
     method: string;
     path: string[];
     handler: UnsecureHandler<B, Q>;
-    bodyParser?: {parse: (data: unknown) => B}
-    queryParser?: {parse: (data: unknown) => Q};
+    bodyParser?: {safeParse: (data: unknown) => SafeParseReturnType<unknown, B>}
+    queryParser?: {safeParse: (data: unknown) => SafeParseReturnType<unknown, Q>};
 }
 
 export type SecureRoute<B, Q> = UnsecureRoute<B, Q> & {
@@ -38,10 +39,10 @@ export class Router {
         this.controllers.push(controller);
     }
 
-    public handleRoute = async (req: Request, res: ServerResponse): Promise<ServerResponse> => {
+    public handleRoute = async (req: Request, res: ServerResponse): Promise<void> => {
         const path = req.url?.split("/").filter(Boolean) || [];
         const method = req.method || "GET";
-        const routeData = this.controllers.find(controller => controller.matchRoute(path, method))?.matchRoute(path, method);
+        const routeData = this.controllers.find(controller => controller.matchRoute<never, never>(path, method))?.matchRoute<never, never>(path, method);
 
         if (routeData === undefined) {
             res.statusCode = 404;
@@ -49,12 +50,19 @@ export class Router {
             return;
         }
 
-        const typedRequest = new TypedRequest(req, routeData.bodyParser, routeData.queryParser);
+        let typedRequest: TypedRequest<never, never>;
+
+        try {
+            typedRequest = new TypedRequest(req, routeData.bodyParser, routeData.queryParser);
+        } catch (error) {
+            res.statusCode = 400;
+            res.write(error.message);
+            res.end();
+            return;
+        }
 
         if (isSecureRoute(routeData)) await this.handleSecureRoute(typedRequest, res, routeData);
         else await this.handleUnsecureRoute(typedRequest, res, routeData);
-
-        return res;
     };
 
     private sendUnauthorized = (response: ServerResponse) => {

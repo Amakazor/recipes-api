@@ -1,7 +1,7 @@
 {
     "name": "recipes-api",
     "version": "1.0.0",
-    "main": "src/index.ts",
+    "main": "src/server.ts",
     "type": "module",
     "license": "MIT",
     "dependencies": {

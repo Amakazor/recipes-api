@@ -26,14 +26,14 @@ export const Route = <B, Q>(method: string, path: string, options?: RouteOptions
 };
 
 export interface RouteController {
-    routes: RouteData<unknown, unknown>[];
+    routes: RouteData<never, never>[];
 }
 
 export const Routes = <T extends Constructor<object>>(Base: T):T & Constructor<RouteController> => {
 
     return class extends Base {
         // noinspection JSMismatchedCollectionQueryUpdate
-        public routes: RouteData<unknown, unknown>[];
+        public routes: RouteData<never, never>[];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         constructor(...args: any[]) {
             super(...args);

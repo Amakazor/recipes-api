@@ -1,10 +1,7 @@
 import { ServerResponse } from "http";
 
 import { Request } from "../../../communication/request";
-import { Ingredient } from "../../../entity/ingredient";
-import { IngredientInRecipe } from "../../../entity/ingredient-in-recipe";
-import { Recipe } from "../../../entity/recipe";
-import { User } from "../../../entity/user";
+import { Ingredient, IngredientInRecipe, Recipe, User } from "../../../entity";
 import { Unit } from "../../../utility/unit";
 import { Controller } from "../../controller";
 import { Route, Routes } from "../../decorators/routes";
