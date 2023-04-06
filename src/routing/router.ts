@@ -1,30 +1,31 @@
-import { IncomingMessage, ServerResponse } from "http";
+import { ServerResponse } from "http";
 
+import { Request, TypedRequest } from "../communication/request";
 import { Controller } from "./controller";
 import { JWT, TokenPayload } from "./security/jwt";
 
-export type SecureHandler = (request: IncomingMessage, response: ServerResponse, token: TokenPayload) => Promise<void>;
-export type UnsecureHandler = (request: IncomingMessage, response: ServerResponse) => Promise<void>;
+export type SecureHandler<B, Q> = (request: TypedRequest<B, Q>, response: ServerResponse, token: TokenPayload) => Promise<void>;
+export type UnsecureHandler<B, Q> = (request: TypedRequest<B, Q>, response: ServerResponse) => Promise<void>;
 
 export type SecurityDefinition = {
     roles: string[];
 }
 
-export type SecureRoute = {
+export type UnsecureRoute<B, Q> = {
     method: string;
     path: string[];
-    handler: SecureHandler;
+    handler: UnsecureHandler<B, Q>;
+    bodyParser?: {parse: (data: unknown) => B}
+    queryParser?: {parse: (data: unknown) => Q};
+}
+
+export type SecureRoute<B, Q> = UnsecureRoute<B, Q> & {
     security: SecurityDefinition;
+    handler: SecureHandler<B, Q>;
 }
 
-export type UnsecureRoute = {
-    method: string;
-    path: string[];
-    handler: UnsecureHandler;
-}
-
-export type RouteData = SecureRoute | UnsecureRoute;
-export const isSecureRoute = (route: RouteData): route is SecureRoute => (route as SecureRoute).security !== undefined;
+export type RouteData<B, Q> = SecureRoute<B, Q> | UnsecureRoute<B, Q> ;
+export const isSecureRoute = <B, Q> (route: RouteData<B, Q> ): route is SecureRoute<B, Q> => (route as SecureRoute<B, Q>).security !== undefined;
 
 export class Router {
     private controllers: Controller[] = [];
@@ -37,7 +38,7 @@ export class Router {
         this.controllers.push(controller);
     }
 
-    public async handleRoute(req: IncomingMessage, res: ServerResponse) {
+    public handleRoute = async (req: Request, res: ServerResponse): Promise<ServerResponse> => {
         const path = req.url?.split("/").filter(Boolean) || [];
         const method = req.method || "GET";
         const routeData = this.controllers.find(controller => controller.matchRoute(path, method))?.matchRoute(path, method);
@@ -48,16 +49,24 @@ export class Router {
             return;
         }
 
-        if (isSecureRoute(routeData)) await this.handleSecureRoute(req, res, routeData);
-        else await routeData.handler(req, res);
-    }
+        const typedRequest = new TypedRequest(req, routeData.bodyParser, routeData.queryParser);
+
+        if (isSecureRoute(routeData)) await this.handleSecureRoute(typedRequest, res, routeData);
+        else await this.handleUnsecureRoute(typedRequest, res, routeData);
+
+        return res;
+    };
 
     private sendUnauthorized = (response: ServerResponse) => {
         response.statusCode = 401;
         response.end();
     };
 
-    private handleSecureRoute = async (request: IncomingMessage, response: ServerResponse, { handler, security }: SecureRoute) => {
+    private handleUnsecureRoute = async <B, Q>(request: TypedRequest<B, Q>, response: ServerResponse, { handler }: UnsecureRoute<B, Q>) => {
+        await handler(request, response);
+    };
+
+    private handleSecureRoute = async <B, Q>(request: TypedRequest<B, Q>, response: ServerResponse, { handler, security }: SecureRoute<B, Q>) => {
         const tokenPayload = JWT.getTokenPayload(request);
         if (!tokenPayload) return this.sendUnauthorized(response);
 

@@ -5,6 +5,7 @@ import "reflect-metadata";
 
 import { IncomingMessage, ServerResponse } from "http";
 
+import { Request } from "./communication/request";
 import { RecipesSource } from "./data-source";
 import { DebugController } from "./routing/controllers/debug/debug-controller";
 import { IngredientController } from "./routing/controllers/ingredients/ingredient-controller";
@@ -25,8 +26,5 @@ const router = new Router([
 
 // noinspection JSUnusedGlobalSymbols
 export const viteNodeApp = async (req: IncomingMessage, res: ServerResponse) => {
-    console.log(`Request: ${req.url}`);
-    await router.handleRoute(req, res);
-    res.end();
-    console.log("Response sent");
+    Request.handleIncomingMessage(req, res, router.handleRoute);
 };

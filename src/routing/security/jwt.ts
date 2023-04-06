@@ -1,5 +1,6 @@
 import { createHmac } from "crypto";
-import { IncomingMessage } from "http";
+
+import { Request } from "../../communication/request";
 
 const SECRET = import.meta.env.VITE_JWT_SECRET;
 
@@ -16,7 +17,7 @@ export type TokenPayload = {
 }
 
 export class JWT {
-    private static extractBearerToken = (request: IncomingMessage):string | undefined => {
+    private static extractBearerToken = (request: Request):string | undefined => {
         const { authorization } = request.headers;
         if (authorization) {
             const [type, token] = authorization.split(" ");
@@ -51,7 +52,7 @@ export class JWT {
         return JSON.parse(payload);
     };
 
-    public static getTokenPayload = (request: IncomingMessage) => {
+    public static getTokenPayload = (request: Request) => {
         const token = this.extractBearerToken(request);
         if (token) return this.extractTokenPayload(token);
 

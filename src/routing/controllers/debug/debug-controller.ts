@@ -1,5 +1,6 @@
-import { IncomingMessage, ServerResponse } from "http";
+import { ServerResponse } from "http";
 
+import { Request } from "../../../communication/request";
 import { Ingredient } from "../../../entity/ingredient";
 import { IngredientInRecipe } from "../../../entity/ingredient-in-recipe";
 import { Recipe } from "../../../entity/recipe";
@@ -16,7 +17,7 @@ export class DebugController extends Controller {
     }
 
     @Route("GET", "/get-token/")
-    public async getDebugToken(req: IncomingMessage, res: ServerResponse) {
+    public async getDebugToken(req: Request, res: ServerResponse) {
         const user = await User.firstUser();
 
         if (!user) {
@@ -38,7 +39,7 @@ export class DebugController extends Controller {
     }
 
     @Route("GET", "/get-admin-token/")
-    public async getAdminToken(req: IncomingMessage, res: ServerResponse) {
+    public async getAdminToken(req: Request, res: ServerResponse) {
         const user = await User.firstAdmin();
 
         if (!user) {
@@ -60,7 +61,7 @@ export class DebugController extends Controller {
     }
 
     @Route("GET", "/reset-database/")
-    public async resetDatabase(req: IncomingMessage, res: ServerResponse) {
+    public async resetDatabase(req: Request, res: ServerResponse) {
         await IngredientInRecipe.truncate();
         await Recipe.truncate();
         await Ingredient.truncate();

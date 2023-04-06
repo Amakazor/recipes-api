@@ -11,12 +11,12 @@ export class Controller {
         this.subControllers = [];
     }
 
-    public matchRoute(path: string[], method: string): RouteData | undefined {
+    public matchRoute<B, Q>(path: string[], method: string): RouteData<B, Q> | undefined {
         if (!this.isOnPath(path)) return undefined;
 
         const subPath = this.shortenPath(path);
 
-        const routeFromSubControllers = this.subControllers.find(controller => controller.matchRoute(subPath, method))?.matchRoute(subPath, method);
+        const routeFromSubControllers = this.subControllers.find(controller => controller.matchRoute<B, Q>(subPath, method))?.matchRoute<B, Q>(subPath, method);
         if (routeFromSubControllers) return routeFromSubControllers;
 
         return this.matchOwnRoute(subPath, method);
@@ -30,7 +30,7 @@ export class Controller {
         return path.slice(this.path.length);
     }
 
-    private matchOwnRoute(path: string[], method: string): RouteData | undefined {
+    private matchOwnRoute<B, Q>(path: string[], method: string): RouteData<B, Q> | undefined {
         if (!this.hasRoutes()) return undefined;
         return this.routes.find(route => route.method === method && route.path.length === path.length && route.path.every((part, index) => part === path[index]));
     }

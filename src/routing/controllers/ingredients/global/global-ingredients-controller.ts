@@ -1,5 +1,6 @@
-import { IncomingMessage, ServerResponse } from "http";
+import { ServerResponse } from "http";
 
+import { Request } from "../../../../communication/request";
 import { Controller } from "../../../controller";
 import { Route, Routes } from "../../../decorators/routes";
 
@@ -10,13 +11,13 @@ export class GlobalIngredientController extends Controller {
     }
 
     @Route("POST", "/")
-    public addGlobalIngredient(req: IncomingMessage, res: ServerResponse) {
+    public addGlobalIngredient(req: Request, res: ServerResponse) {
         res.statusCode = 204;
         res.end();
     }
 
     @Route("DELETE", "/")
-    public removeGlobalIngredient(req: IncomingMessage, res: ServerResponse) {
+    public removeGlobalIngredient(req: Request, res: ServerResponse) {
         res.statusCode = 204;
         res.end();
     }

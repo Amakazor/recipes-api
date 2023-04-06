@@ -5,27 +5,35 @@ type Constructor<T> = new(...args: any[]) => T;
 
 const RouteList = Symbol("RouteList");
 
-export const Route = (method: string, path: string, security?: SecurityDefinition) => {
+type RouteOptions<B, Q> = {
+    security?: SecurityDefinition;
+    bodyParser?: RouteData<B, Q>["bodyParser"];
+    queryParser?: RouteData<B, Q>["queryParser"];
+}
+
+export const Route = <B, Q>(method: string, path: string, options?: RouteOptions<B, Q>) => {
     return function (target: object, propertyKey: string, descriptor: PropertyDescriptor) {
         target[RouteList] = target[RouteList] || [];
         target[RouteList].push({
             method,
             path: path.split("/").filter(Boolean),
             handler: descriptor.value,
-            security,
+            security: options?.security,
+            bodyParser: options?.bodyParser,
+            queryParser: options?.queryParser,
         });
     };
 };
 
 export interface RouteController {
-    routes: RouteData[];
+    routes: RouteData<unknown, unknown>[];
 }
 
 export const Routes = <T extends Constructor<object>>(Base: T):T & Constructor<RouteController> => {
 
     return class extends Base {
         // noinspection JSMismatchedCollectionQueryUpdate
-        public routes: RouteData[];
+        public routes: RouteData<unknown, unknown>[];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         constructor(...args: any[]) {
             super(...args);
