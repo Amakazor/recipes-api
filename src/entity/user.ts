@@ -1,4 +1,4 @@
-import { BaseEntity, Column, CreateDateColumn, Entity, Not, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { BaseEntity, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 import { Ingredient } from "./ingredient";
 import { Recipe } from "./recipe";
@@ -40,11 +40,15 @@ export class User extends BaseEntity implements UserDTO {
     }
 
     public static firstAdmin(): Promise<User> {
-        return this.findOne({ where: { roles: "admin" } });
+        return this.createQueryBuilder("user")
+            .where("user.roles IN (:role1, :role2)", {
+                role1: "admin,user",
+                role2: "user,admin",
+            }).getOne();
     }
 
     public static firstUser(): Promise<User> {
-        return this.findOne({ where: { roles: Not("admin") } });
+        return this.findOne({ where: { roles: "user" } });
     }
 
     private static async resetAutoIncrement() {
