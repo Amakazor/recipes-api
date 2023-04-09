@@ -1,7 +1,6 @@
 import { BaseEntity, Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
-import { IngredientInRecipe } from "./ingredient-in-recipe";
-import { User } from "./user";
+import { IngredientInRecipe, User } from "./";
 
 export interface RecipeDTO {
     id?: number;
@@ -23,6 +22,17 @@ export class Recipe extends BaseEntity implements RecipeDTO {
 
     @OneToMany(() => IngredientInRecipe, ingredientInRecipe => ingredientInRecipe.recipe, { cascade: true })
         ingredients: IngredientInRecipe[];
+
+    public static async findOneWithAllData(id: number) {
+        return await Recipe
+            .getRepository()
+            .createQueryBuilder("recipe")
+            .where("recipe.id = :id", { id })
+            .leftJoinAndSelect("recipe.owner", "owner")
+            .leftJoinAndSelect("recipe.ingredients", "ingredientsInRecipe")
+            .leftJoinAndSelect("ingredientsInRecipe.ingredient", "ingredients")
+            .getOne();
+    }
 
     private static async resetAutoIncrement() {
         const { tableName } = this.getRepository().metadata;

@@ -1,8 +1,7 @@
 import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
 import { Unit } from "../utility/unit";
-import { Ingredient } from "./ingredient";
-import { Recipe } from "./recipe";
+import { Ingredient, Recipe } from "./";
 
 export interface IngredientInRecipeDTO {
     id?: number;
@@ -64,4 +63,5 @@ export class IngredientInRecipe extends BaseEntity implements IngredientInRecipe
 
         return ingredientInRecipe;
     }
+
 }

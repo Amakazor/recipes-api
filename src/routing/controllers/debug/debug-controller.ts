@@ -1,7 +1,8 @@
 import { ServerResponse } from "http";
 
 import { Request } from "../../../communication/request";
-import { Ingredient, IngredientInRecipe, Recipe, User } from "../../../entity";
+import { Ingredient, IngredientInRecipe, Plan, PlanOperation, Recipe, User } from "../../../entity";
+import { AddRecipe } from "../../../entity/operations";
 import { Unit } from "../../../utility/unit";
 import { Controller } from "../../controller";
 import { Route, Routes } from "../../decorators/routes";
@@ -59,11 +60,29 @@ export class DebugController extends Controller {
 
     @Route("GET", "/reset-database/")
     public async resetDatabase(req: Request, res: ServerResponse) {
+        await DebugController.truncate();
+
+        const newUser = await DebugController.addUsers();
+
+        const recipes = await DebugController.addIngredientsAndRecipes(newUser);
+
+        await DebugController.addPlan(recipes, newUser);
+
+        res.statusCode = 200;
+        res.write("Database reset");
+        res.end();
+    }
+
+    private static truncate = async () => {
+        await PlanOperation.truncate();
+        await Plan.truncate();
         await IngredientInRecipe.truncate();
         await Recipe.truncate();
         await Ingredient.truncate();
         await User.truncate();
+    };
 
+    private static addUsers = async () => {
         const newAdmin = User.fromDTO({
             email: "admin@user.com",
             createdAt: new Date(),
@@ -81,7 +100,11 @@ export class DebugController extends Controller {
             roles: ["user"],
         });
         await newUser.save();
+        await newUser.reload();
+        return newUser;
+    };
 
+    private static addIngredientsAndRecipes = async (newUser: User) => {
         const lettuce = Ingredient.fromDTO({
             name: "lettuce",
             owner: newUser,
@@ -192,8 +215,50 @@ export class DebugController extends Controller {
         await salad.save();
         await sandwich.save();
 
-        res.statusCode = 200;
-        res.write("Database reset");
-        res.end();
-    }
+        return {
+            salad,
+            sandwich,
+        };
+    };
+
+    private static addPlan = async ({ sandwich, salad }:{sandwich:Recipe, salad:Recipe}, user: User) => {
+        const plan:Plan = Plan.fromDTO({
+            owner: user,
+            operations: [],
+        });
+
+        const sandwichOperation: PlanOperation = PlanOperation.fromDTO({
+            dataDTO: AddRecipe.fromDTO({
+                type: "AddRecipe",
+                inPlanId: 1,
+                recipeId: sandwich.id,
+                date: new Date(Date.now()).toISOString(),
+            }).toDto(),
+            plan: plan,
+            owner: user,
+        });
+
+        const saladOperation: PlanOperation = PlanOperation.fromDTO({
+            dataDTO: AddRecipe.fromDTO({
+                type: "AddRecipe",
+                inPlanId: 2,
+                recipeId: salad.id,
+                date: new Date(Date.now()).toISOString(),
+            }).toDto(),
+            plan: plan,
+            owner: user,
+        });
+
+        const sandwichRemovalOperation: PlanOperation = PlanOperation.fromDTO({
+            dataDTO: {
+                type: "RemoveRecipe",
+                inPlanId: 1,
+            },
+            plan: plan,
+            owner: user,
+        });
+
+        plan.operations = [sandwichOperation, saladOperation, sandwichRemovalOperation];
+        await plan.save();
+    };
 }

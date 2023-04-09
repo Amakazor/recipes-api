@@ -1,7 +1,6 @@
 import { BaseEntity, Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
-import { IngredientInRecipe } from "./ingredient-in-recipe";
-import { User } from "./user";
+import { IngredientInRecipe, User } from "./";
 
 export interface IngredientDTO {
     id?: number;

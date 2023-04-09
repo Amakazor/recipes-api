@@ -1,7 +1,6 @@
 import { BaseEntity, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
-import { Ingredient } from "./ingredient";
-import { Recipe } from "./recipe";
+import { Ingredient, Plan, PlanOperation, Recipe } from "./";
 
 export type Role = "admin" | "user";
 
@@ -29,11 +28,17 @@ export class User extends BaseEntity implements UserDTO {
     @Column("simple-array")
         roles: Role[];
 
-    @OneToMany(() => Ingredient, ingredient => ingredient.owner)
+    @OneToMany(() => Ingredient, ingredient => ingredient.owner, { cascade: true })
         ingredients: Ingredient[];
 
-    @OneToMany(() => Recipe, recipe => recipe.owner)
+    @OneToMany(() => Recipe, recipe => recipe.owner, { cascade: true })
         recipes: Recipe[];
+
+    @OneToMany(() => Plan, plan => plan.owner, { cascade: true })
+        plans: Plan[];
+
+    @OneToMany(() => PlanOperation, operation => operation.owner, { cascade: true })
+        operations: PlanOperation[];
 
     public static byId(id: number): Promise<User> {
         return this.findOne({ where: { id } });

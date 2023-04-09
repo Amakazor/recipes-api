@@ -2,10 +2,7 @@ import "reflect-metadata";
 
 import { DataSource } from "typeorm";
 
-import { Ingredient } from "./entity/ingredient";
-import { IngredientInRecipe } from "./entity/ingredient-in-recipe";
-import { Recipe } from "./entity/recipe";
-import { User } from "./entity/user";
+import { Ingredient, IngredientInRecipe, Plan, PlanOperation, Recipe, User } from "./entity";
 
 export const RecipesSource = new DataSource({
     type: "postgres",
@@ -17,5 +14,5 @@ export const RecipesSource = new DataSource({
     logger: "advanced-console",
     logging: "all",
     synchronize: true,
-    entities: [Ingredient, User, Recipe, IngredientInRecipe],
+    entities: [Ingredient, User, Recipe, IngredientInRecipe, Plan, PlanOperation],
 });
