@@ -10,13 +10,13 @@ export class GlobalIngredientController extends Controller {
         super("/global");
     }
 
-    @Route("POST", "/")
+    @Route("POST", "/", { security: { roles: ["admin"] } })
     public addGlobalIngredient(req: Request, res: ServerResponse) {
         res.statusCode = 204;
         res.end();
     }
 
-    @Route("DELETE", "/")
+    @Route("DELETE", "/", { security: { roles: ["admin"] } })
     public removeGlobalIngredient(req: Request, res: ServerResponse) {
         res.statusCode = 204;
         res.end();
