@@ -7,6 +7,7 @@ import { IncomingMessage, ServerResponse } from "http";
 import { Request } from "./communication/request";
 import { RecipesSource } from "./data-source";
 import { DebugController, IngredientController } from "./routing/controllers";
+import { PlansController } from "./routing/controllers/plans/plans-controller";
 import { Router } from "./routing/router";
 
 declare global {
@@ -46,6 +47,7 @@ try {
 const router = new Router([
     new IngredientController(),
     new DebugController(),
+    new PlansController(),
 ]);
 
 export const viteNodeApp = async (req: IncomingMessage, res: ServerResponse) => {

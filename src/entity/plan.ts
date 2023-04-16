@@ -103,4 +103,21 @@ export class Plan extends BaseEntity implements PlanDTO {
             recipes: filteredRecipes,
         };
     }
+
+    public static async getByIdFromUser(owner: User) {
+        return await this.getRepository().createQueryBuilder("plan")
+            .leftJoinAndSelect("plan.operations", "operation")
+            .leftJoinAndSelect("plan.owner", "owner")
+            .where("owner.id = :ownerId", { ownerId: owner.id })
+            .getMany();
+    }
+
+    public static async getOneByIdFromUser(id: number, owner: User) {
+        return await this.getRepository().createQueryBuilder("plan")
+            .leftJoinAndSelect("plan.operations", "operation")
+            .leftJoinAndSelect("plan.owner", "owner")
+            .where("plan.id = :id", { id })
+            .where("owner.id = :ownerId", { ownerId: owner.id })
+            .getOne();
+    }
 }
