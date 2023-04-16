@@ -11,8 +11,7 @@ export const RecipesSource = new DataSource({
     username: import.meta.env.VITE_DATABASE_USER,
     password: import.meta.env.VITE_DATABASE_PASSWORD,
     database: import.meta.env.VITE_DATABASE_NAME,
-    logger: "advanced-console",
-    logging: "all",
+    logging: null,
     synchronize: true,
     entities: [Ingredient, User, Recipe, IngredientInRecipe, Plan, PlanOperation],
 });

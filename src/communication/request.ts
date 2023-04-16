@@ -1,3 +1,4 @@
+/* eslint-disable max-params */
 // eslint-disable-next-line max-classes-per-file
 import { IncomingHttpHeaders, IncomingMessage, ServerResponse } from "http";
 import parseUrl from "parseurl";
@@ -12,7 +13,6 @@ export class Request {
     public body: unknown;
     public query: unknown;
 
-    // eslint-disable-next-line max-params
     constructor(url, method, headers, body, query) {
         this.url = url;
         this.method = method;
@@ -50,23 +50,33 @@ export class Request {
     }
 }
 
-export class TypedRequest<B, Q> extends Request {
+export class TypedRequest<B = never, Q = never, P = never> extends Request {
+    private readonly pathParameters: Record<string, string>;
+
     public parsedBody: B;
     public parsedQuery: Q;
+    public parsedPathParameters: P;
 
-    constructor(request: Request, bodyParser: RouteData<B, Q>["bodyParser"], queryParser: RouteData<B, Q>["queryParser"]) {
+    constructor(request: Request, routeData: RouteData, pathParameters: Record<string, string>) {
         super(request.url, request.method, request.headers, request.body, request.query);
+        this.pathParameters = pathParameters;
 
         try {
-            this.parsedBody = this.parseBody(bodyParser?.safeParse ?? TypedRequest.nullparser);
+            this.parsedBody = this.parseBody(routeData.bodyParser?.safeParse ?? TypedRequest.nullparser);
         } catch (error) {
             throw new Error(`Invalid request body: ${error}`);
         }
 
         try {
-            this.parsedQuery = this.parseQuery(queryParser?.safeParse ?? TypedRequest.nullparser);
+            this.parsedQuery = this.parseQuery(routeData.queryParser?.safeParse ?? TypedRequest.nullparser);
         } catch (error) {
             throw new Error(`Invalid request query: ${error}`);
+        }
+
+        try {
+            this.parsedPathParameters = this.parsePathParameters(routeData.pathParametersParser?.safeParse ?? TypedRequest.nullparser);
+        } catch (error) {
+            throw new Error(`Invalid request path parameters: ${error}`);
         }
     }
 
@@ -78,6 +88,12 @@ export class TypedRequest<B, Q> extends Request {
 
     private parseQuery<T>(parser: (query: unknown) => SafeParseReturnType<unknown, T>): T {
         const parsed = parser(this.query);
+        if (parsed.success === false) throw parsed.error;
+        return parsed.data;
+    }
+
+    private parsePathParameters<T>(parser: (query: unknown) => SafeParseReturnType<unknown, T>): T {
+        const parsed = parser(this.pathParameters);
         if (parsed.success === false) throw parsed.error;
         return parsed.data;
     }

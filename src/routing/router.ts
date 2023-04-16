@@ -2,31 +2,33 @@ import { ServerResponse } from "http";
 import { SafeParseReturnType } from "zod";
 
 import { Request, TypedRequest } from "../communication/request";
+import { User } from "../entity";
 import { Controller } from "./controller";
 import { JWT, TokenPayload } from "./security/jwt";
 
-export type SecureHandler<B, Q> = (request: TypedRequest<B, Q>, response: ServerResponse, token: TokenPayload) => Promise<void>;
-export type UnsecureHandler<B, Q> = (request: TypedRequest<B, Q>, response: ServerResponse) => Promise<void>;
+export type SecureHandler<B, Q, P> = (request: TypedRequest<B, Q, P>, response: ServerResponse, user: User) => Promise<void>;
+export type UnsecureHandler<B, Q, P> = (request: TypedRequest<B, Q, P>, response: ServerResponse) => Promise<void>;
 
 export type SecurityDefinition = {
     roles: string[];
 }
 
-export type UnsecureRoute<B, Q> = {
+export type UnsecureRoute<B = never, Q = never, P = never> = {
     method: string;
     path: string[];
-    handler: UnsecureHandler<B, Q>;
-    bodyParser?: {safeParse: (data: unknown) => SafeParseReturnType<unknown, B>}
-    queryParser?: {safeParse: (data: unknown) => SafeParseReturnType<unknown, Q>};
+    handler: UnsecureHandler<B, Q, P>;
+    bodyParser?: { safeParse: (data: unknown) => SafeParseReturnType<unknown, B> }
+    queryParser?: { safeParse: (data: unknown) => SafeParseReturnType<unknown, Q> };
+    pathParametersParser?: { safeParse: (data: unknown) => SafeParseReturnType<unknown, P> };
 }
 
-export type SecureRoute<B, Q> = UnsecureRoute<B, Q> & {
+export type SecureRoute<B = never, Q = never, P = never> = UnsecureRoute<B, Q, P> & {
     security: SecurityDefinition;
-    handler: SecureHandler<B, Q>;
+    handler: SecureHandler<B, Q, P>;
 }
 
-export type RouteData<B, Q> = SecureRoute<B, Q> | UnsecureRoute<B, Q> ;
-export const isSecureRoute = <B, Q> (route: RouteData<B, Q> ): route is SecureRoute<B, Q> => (route as SecureRoute<B, Q>).security !== undefined;
+export type RouteData<B = never, Q = never, P = never> = SecureRoute<B, Q, P> | UnsecureRoute<B, Q, P>;
+export const isSecureRoute = <B = never, Q = never, P = never>(route: RouteData<B, Q, P>): route is SecureRoute<B, Q, P> => (route as SecureRoute<B, Q, P>).security !== undefined;
 
 export class Router {
     private controllers: Controller[] = [];
@@ -42,18 +44,18 @@ export class Router {
     public handleRoute = async (req: Request, res: ServerResponse): Promise<void> => {
         const path = req.url?.split("/").filter(Boolean) || [];
         const method = req.method || "GET";
-        const routeData = this.controllers.find(controller => controller.matchRoute<never, never>(path, method))?.matchRoute<never, never>(path, method);
+        const routeData = this.matchRoute(path, method);
 
-        if (routeData === undefined) {
+        if (!routeData) {
             res.statusCode = 404;
             res.end();
             return;
         }
 
-        let typedRequest: TypedRequest<never, never>;
+        let typedRequest: TypedRequest;
 
         try {
-            typedRequest = new TypedRequest(req, routeData.bodyParser, routeData.queryParser);
+            typedRequest = new TypedRequest(req, routeData, this.extractParameters(path.slice(-routeData.path.length), routeData));
         } catch (error) {
             res.statusCode = 400;
             res.write(error.message);
@@ -61,26 +63,58 @@ export class Router {
             return;
         }
 
-        if (isSecureRoute(routeData)) await this.handleSecureRoute(typedRequest, res, routeData);
-        else await this.handleUnsecureRoute(typedRequest, res, routeData);
+        if (isSecureRoute(routeData)) await Router.handleSecureRoute(typedRequest, res, routeData);
+        else await Router.handleUnsecureRoute(typedRequest, res, routeData);
     };
 
-    private sendUnauthorized = (response: ServerResponse) => {
-        response.statusCode = 401;
-        response.end();
+    private matchRoute(path: string[], method: string) {
+        return this.controllers.firstNotEmptyMapped(controller => controller.matchRoute(path, method));
+    }
+
+    private extractParameters(path: string[], route: RouteData): Record<string, string> {
+        return route.path
+            .map((part, index) => [index, part] as const)
+            .filter(([, part]) => Router.isPathPartAParameter(part))
+            .reduce<Record<string, string>>((acc, [index, part]) => ({
+                ...acc,
+                [part.slice(1, -1)]: path[index],
+            }), {});
+    }
+
+    private static getUserFromToken = async (payload: TokenPayload): Promise<User | undefined> => {
+        try {
+            return User.findOneBy({ id: parseInt(payload.id, 10) });
+        } catch {
+            return undefined;
+        }
     };
 
-    private handleUnsecureRoute = async <B, Q>(request: TypedRequest<B, Q>, response: ServerResponse, { handler }: UnsecureRoute<B, Q>) => {
+    private static handleUnsecureRoute = async <B, Q, P>(request: TypedRequest<B, Q, P>, response: ServerResponse, { handler }: UnsecureRoute<B, Q, P>) => {
         await handler(request, response);
     };
 
-    private handleSecureRoute = async <B, Q>(request: TypedRequest<B, Q>, response: ServerResponse, { handler, security }: SecureRoute<B, Q>) => {
+    public static isPathPartAParameter = (part: string) => part.length > 2 && part.startsWith("[") && part.endsWith("]");
+    public static isParametrizedRoute = (route: RouteData) => route.path.some(Router.isPathPartAParameter);
+    public static isNotParametrizedRoute = (route: RouteData) => !Router.isParametrizedRoute(route);
+
+    private static handleSecureRoute = async <B, Q, P>(request: TypedRequest<B, Q, P>, response: ServerResponse, {
+        handler,
+        security,
+    }: SecureRoute<B, Q, P>) => {
         const tokenPayload = JWT.getTokenPayload(request);
-        if (!tokenPayload) return this.sendUnauthorized(response);
+        if (!tokenPayload) return Router.sendUnauthorized(response);
 
-        if (security.roles.some(role => !tokenPayload.roles.includes(role))) return this.sendUnauthorized(response);
+        if (security.roles.some(role => !tokenPayload.roles.includes(role))) return Router.sendUnauthorized(response);
 
-        await handler(request, response, tokenPayload);
+        const user = await Router.getUserFromToken(tokenPayload);
+        if (user === undefined) return Router.sendUnauthorized(response);
+
+        await handler(request, response, user);
+    };
+
+    private static sendUnauthorized = (response: ServerResponse) => {
+        response.statusCode = 401;
+        response.end();
     };
 
 }

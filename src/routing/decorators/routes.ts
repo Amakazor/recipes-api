@@ -1,17 +1,18 @@
-import { RouteData, SecurityDefinition } from "../router";
+import { RouteData, Router, SecurityDefinition } from "../router";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Constructor<T> = new(...args: any[]) => T;
 
 const RouteList = Symbol("RouteList");
 
-type RouteOptions<B, Q> = {
+type RouteOptions<B, Q, P> = {
     security?: SecurityDefinition;
-    bodyParser?: RouteData<B, Q>["bodyParser"];
-    queryParser?: RouteData<B, Q>["queryParser"];
+    bodyParser?: RouteData<B, Q, P>["bodyParser"];
+    queryParser?: RouteData<B, Q, P>["queryParser"];
+    pathParametersParser?: RouteData<B, Q, P>["pathParametersParser"];
 }
 
-export const Route = <B, Q>(method: string, path: string, options?: RouteOptions<B, Q>) => {
+export const Route = <B, Q, P>(method: string, path: string, options?: RouteOptions<B, Q, P>) => {
     return function (target: object, propertyKey: string, descriptor: PropertyDescriptor) {
         target[RouteList] = target[RouteList] || [];
         target[RouteList].push({
@@ -21,24 +22,30 @@ export const Route = <B, Q>(method: string, path: string, options?: RouteOptions
             security: options?.security,
             bodyParser: options?.bodyParser,
             queryParser: options?.queryParser,
+            pathParametersParser: options?.pathParametersParser,
         });
     };
 };
 
 export interface RouteController {
-    routes: RouteData<never, never>[];
+    constantRoutes: RouteData[];
+    parametrizedRoutes: RouteData[];
 }
 
 export const Routes = <T extends Constructor<object>>(Base: T):T & Constructor<RouteController> => {
 
+    // noinspection JSMismatchedCollectionQueryUpdate
     return class extends Base {
-        // noinspection JSMismatchedCollectionQueryUpdate
-        public routes: RouteData<never, never>[];
+        public constantRoutes: RouteData[];
+        public parametrizedRoutes: RouteData[];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         constructor(...args: any[]) {
             super(...args);
 
-            this.routes = Base.prototype[RouteList] || [];
+            const allRoutes:RouteData[] = Base.prototype[RouteList] || [];
+
+            this.parametrizedRoutes = allRoutes.filter(Router.isParametrizedRoute);
+            this.constantRoutes = allRoutes.filter(Router.isNotParametrizedRoute);
         }
     };
 };
